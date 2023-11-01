@@ -221,11 +221,12 @@ func (r *CertificateRequestReconciler) Reconcile(ctx context.Context, req ctrl.R
 		return ctrl.Result{}, fmt.Errorf("%w: %v", errSignerBuilder, err)
 	}
 
-	signed, err := signer.Sign(certificateRequest.Spec.Request)
+	signed, ca, err := signer.Sign(certificateRequest.Spec.Request)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("%w: %v", errSignerSign, err)
 	}
 	certificateRequest.Status.Certificate = signed
+	certificateRequest.Status.CA = ca
 
 	setReadyCondition(cmmeta.ConditionTrue, cmapi.CertificateRequestReasonIssued, "Signed")
 	return ctrl.Result{}, nil

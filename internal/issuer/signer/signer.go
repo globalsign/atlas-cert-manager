@@ -21,7 +21,7 @@ type HealthChecker interface {
 type HealthCheckerBuilder func(*sampleissuerapi.IssuerSpec, map[string][]byte) (HealthChecker, error)
 
 type Signer interface {
-	Sign([]byte) ([]byte, error)
+	Sign([]byte) ([]byte, []byte, error)
 }
 
 type SignerBuilder func(*sampleissuerapi.IssuerSpec, map[string][]byte) (Signer, error)
@@ -67,19 +67,20 @@ func (o *hvcaSigner) Check() error {
 	return nil
 }
 
-func (o *hvcaSigner) Sign(csrBytes []byte) ([]byte, error) {
+func (o *hvcaSigner) Sign(csrBytes []byte) ([]byte, []byte, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	var clnt *hvclient.Client
 	var serial *big.Int
 	var info *hvclient.CertInfo
+	var caChainList []*x509.Certificate
 	defer cancel()
 	if clnt, err = hvclient.NewClient(ctx, o.config); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	// Parse the csr
 	csr, err := parseCSR(csrBytes)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	var req = hvclient.Request{
@@ -92,13 +93,13 @@ func (o *hvcaSigner) Sign(csrBytes []byte) ([]byte, error) {
 	// Pull the validation policy and check it for required fields
 	vp, err := clnt.Policy(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	// Subject validation
 	// common name
 	if vp.SubjectDN.CommonName.Presence == hvclient.Required {
 		if csr.Subject.CommonName == "" {
-			return nil, errors.New("atlas validation policy requires subject common name, but CSR did not contain one")
+			return nil, nil, errors.New("atlas validation policy requires subject common name, but CSR did not contain one")
 		}
 		req.Subject.CommonName = csr.Subject.CommonName
 	}
@@ -109,7 +110,7 @@ func (o *hvcaSigner) Sign(csrBytes []byte) ([]byte, error) {
 	// serial number
 	if vp.SubjectDN.SerialNumber.Presence == hvclient.Required {
 		if csr.Subject.SerialNumber == "" {
-			return nil, errors.New("atlas validation policy requires subject serial number, but CSR did not contain one")
+			return nil, nil, errors.New("atlas validation policy requires subject serial number, but CSR did not contain one")
 		}
 		req.Subject.SerialNumber = csr.Subject.SerialNumber
 	}
@@ -135,15 +136,15 @@ func (o *hvcaSigner) Sign(csrBytes []byte) ([]byte, error) {
 	}
 	// Validate number of SANs
 	if vp.SAN.DNSNames.MinCount > len(req.SAN.DNSNames) || vp.SAN.IPAddresses.MinCount > len(req.SAN.IPAddresses) {
-		return nil, errors.New("atlas validation policy requires additional SANs not present in the provided CSR")
+		return nil, nil, errors.New("atlas validation policy requires additional SANs not present in the provided CSR")
 	}
 	// Check key type
 	if vp.PublicKey.KeyType.String() != csr.PublicKeyAlgorithm.String() {
-		return nil, errors.New("csr public key type doesn't match Atlas account pubic key type: CSR - " + csr.PublicKeyAlgorithm.String() + "Atlas - " + vp.PublicKey.KeyType.String())
+		return nil, nil, errors.New("csr public key type doesn't match Atlas account pubic key type: CSR - " + csr.PublicKeyAlgorithm.String() + "Atlas - " + vp.PublicKey.KeyType.String())
 	}
 	// Check PKCS type
 	if vp.PublicKey.KeyFormat != hvclient.PKCS10 {
-		return nil, errors.New("atlas account does not support pkcs10 key format, update atlas account")
+		return nil, nil, errors.New("atlas account does not support pkcs10 key format, update atlas account")
 	}
 	// Check signature hash algorithm requirement and set to the first approved one
 	if vp.SignaturePolicy.HashAlgorithm.Presence == 2 { //Presence is required
@@ -151,14 +152,32 @@ func (o *hvcaSigner) Sign(csrBytes []byte) ([]byte, error) {
 	}
 	// Request cert
 	if serial, err = clnt.CertificateRequest(ctx, &req); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	// Retrieve cert
 	if info, err = clnt.CertificateRetrieve(ctx, serial); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+	// Retrieve ca chain
+	if caChainList, err = clnt.TrustChain(ctx); err != nil {
+		return nil, nil, err
+	}
+
+	// Convert CA Chain into PEM
+	var caChain []byte
+	for _, cert := range caChainList {
+		var certPEM = pem.EncodeToMemory(&pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: cert.Raw,
+		})
+
+		caChain = append(caChain, certPEM...)
+	}
+
 	return pem.EncodeToMemory(&pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: info.X509.Raw,
-	}), nil
+			Type:  "CERTIFICATE",
+			Bytes: info.X509.Raw,
+		}),
+		caChain,
+		nil
 }

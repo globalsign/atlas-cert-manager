@@ -38,8 +38,9 @@ type fakeSigner struct {
 	errSign error
 }
 
-func (o *fakeSigner) Sign([]byte) ([]byte, error) {
-	return []byte("fake signed certificate"), o.errSign
+func (o *fakeSigner) Sign([]byte) ([]byte, []byte, error) {
+
+	return []byte("fake signed certificate"), []byte("fake ca chain"), o.errSign
 }
 
 func TestCertificateRequestReconcile(t *testing.T) {
