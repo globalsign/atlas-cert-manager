@@ -51,6 +51,13 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+      - name: Install kustomize
+        uses: karancode/kustomize-github-action@master
+        with:
+          kustomize_install: true
+      - name: Create install.yaml
+        shell: bash
+        run: /bin/bash make build/install.yaml
       - name: Upload install.yaml
         uses: actions/upload-artifact@v4
         with:
@@ -65,9 +72,5 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
-          body: |
-            Changes in this Release
-            - First Change
-            - Second Change
           draft: false
           prerelease: false
