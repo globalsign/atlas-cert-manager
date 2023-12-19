@@ -9,14 +9,19 @@
 
 name: Build and Publish
 
-on: workflow_dispatch
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  GITHUBOWNER: ${{ github.repository_owner }}
 
 jobs:
-  build-and-push-image:
+  docker_build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -46,3 +51,23 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+      - name: Upload install.yaml
+        uses: actions/upload-artifact@v4
+        with:
+          name: install.yaml
+          path: build/install.yaml
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            Changes in this Release
+            - First Change
+            - Second Change
+          draft: false
+          prerelease: false

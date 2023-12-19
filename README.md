@@ -17,7 +17,7 @@ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/do
 ```
 Next, install the Atlas controller and CRDs:
 ```console
-kubectl apply -f https://github.com/nhgs64/atlas-cert-manager/releases/latest/download/install.yaml
+kubectl apply -f https://github.com/globalsign/atlas-cert-manager/releases/latest/download/install.yaml
 ```
 The controller is deployed and ready to handle Atlas requests.
 

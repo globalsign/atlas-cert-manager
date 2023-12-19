@@ -7,10 +7,11 @@ SHELL := bash
 
 # The version which will be reported by the --version argument of each binary
 # and which will be used as the Docker image tag
-VERSION ?= master
+VERSION ?= latest
 # The Docker repository name, overridden in CI.
 DOCKER_REGISTRY ?= ghcr.io
-DOCKER_IMAGE_NAME ?= nhgs64/atlas-cert-manager
+GITHUBOWNER ?= globalsign
+DOCKER_IMAGE_NAME ?= ${GITHUBOWNER}/atlas-cert-manager
 # Image URL to use all building/pushing image targets
 IMG ?= ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${VERSION}
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
