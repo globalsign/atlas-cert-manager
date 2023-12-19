@@ -60,12 +60,25 @@ jobs:
         shell: bash
         run: make build/install.yaml
 
-      - name: Upload binaries to release
-        uses: svenstaro/upload-release-action@v2
+      - name: create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: build/install.yaml
-          asset_name: install.yaml
-          tag: ${{ github.ref }}
-          overwrite: true
-          body: "Release of ${{ steps.get_version.outputs.VERSION }}"
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: true
+          prerelease: false
+          body: |
+            One-line install: `kubectl apply -f https://github.com/${{ github.repository_owner }}/atlas-cert-manager/releases/download/v${{ steps.get_version.outputs.VERSION }}/install.yaml`
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: build/install.yaml
+          asset_name: build/install.yaml
+          asset_content_type: application/x-yaml
