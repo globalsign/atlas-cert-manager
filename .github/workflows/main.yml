@@ -51,10 +51,10 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-      - name: Install kustomize
-        uses: karancode/kustomize-github-action@master
-        with:
-          kustomize_install: true
+      # - name: Install kustomize
+      #   uses: karancode/kustomize-github-action@master
+      #   with:
+      #     kustomize_install: true
       - name: Create install.yaml
         shell: bash
         run: /bin/bash make build/install.yaml
