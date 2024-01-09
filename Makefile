@@ -7,7 +7,7 @@ SHELL := bash
 
 # The version which will be reported by the --version argument of each binary
 # and which will be used as the Docker image tag
-VERSION ?= latest
+VERSION ?= master
 # The Docker repository name, overridden in CI.
 DOCKER_REGISTRY ?= ghcr.io
 GITHUBOWNER ?= globalsign
