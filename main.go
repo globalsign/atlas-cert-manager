@@ -20,16 +20,16 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/clock"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"k8s.io/utils/clock"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	sampleissuerv1alpha1 "github.com/cert-manager/sample-external-issuer/api/v1alpha1"
 	"github.com/cert-manager/sample-external-issuer/internal/controllers"
@@ -105,11 +105,10 @@ func main() {
 	)
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: metricsAddr,
-		Port:               9443,
-		LeaderElection:     enableLeaderElection,
-		LeaderElectionID:   "54c549fd.example.com",
+		Scheme:           scheme,
+		Metrics:          metricsserver.Options{BindAddress: metricsAddr},
+		LeaderElection:   enableLeaderElection,
+		LeaderElectionID: "54c549fd.example.com",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -171,7 +170,7 @@ func getInClusterNamespace() (string, error) {
 	}
 
 	// Load the namespace file and return its content
-	namespace, err := ioutil.ReadFile(inClusterNamespacePath)
+	namespace, err := os.ReadFile(inClusterNamespacePath)
 	if err != nil {
 		return "", fmt.Errorf("error reading namespace file: %w", err)
 	}
