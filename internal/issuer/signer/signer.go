@@ -8,6 +8,8 @@ import (
 	"math/big"
 	"time"
 
+	"encoding/asn1"
+
 	sampleissuerapi "github.com/cert-manager/sample-external-issuer/api/v1alpha1"
 	"github.com/globalsign/hvclient"
 )
@@ -89,6 +91,7 @@ func (o *hvcaSigner) Sign(csrBytes []byte) ([]byte, []byte, error) {
 		SAN:       &hvclient.SAN{},
 		Validity:  &hvclient.Validity{NotBefore: time.Now(), NotAfter: time.Unix(0, 0)},
 		Signature: &hvclient.Signature{},
+		EKUs:      []asn1.ObjectIdentifier{},
 	}
 	// Pull the validation policy and check it for required fields
 	vp, err := clnt.Policy(ctx)
@@ -134,6 +137,25 @@ func (o *hvcaSigner) Sign(csrBytes []byte) ([]byte, []byte, error) {
 			req.SAN.IPAddresses = append(req.SAN.IPAddresses[:], csr.IPAddresses[:]...)
 		}
 	}
+
+	if vp.EKUs.EKUs.Static == false && vp.EKUs.EKUs.MaxCount > 0 {
+		// Extract EKUs from CSR extensions
+		var ekuOIDs []asn1.ObjectIdentifier
+		for _, ext := range csr.Extensions {
+			if ext.Id.Equal([]int{2, 5, 29, 37}) { // OID for Extended Key Usage
+				var oids []asn1.ObjectIdentifier
+				_, err := asn1.Unmarshal(ext.Value, &oids)
+				if err == nil {
+					ekuOIDs = append(ekuOIDs, oids...)
+				}
+			}
+		}
+		if len(ekuOIDs) < vp.EKUs.EKUs.MaxCount {
+			req.EKUs = append(req.EKUs, ekuOIDs...)
+		}
+	}
+
+	// Check if the SANs are static, if so, we need to ensure that the
 	// Validate number of SANs
 	if vp.SAN.DNSNames.MinCount > len(req.SAN.DNSNames) || vp.SAN.IPAddresses.MinCount > len(req.SAN.IPAddresses) {
 		return nil, nil, errors.New("atlas validation policy requires additional SANs not present in the provided CSR")

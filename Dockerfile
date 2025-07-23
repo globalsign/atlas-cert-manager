@@ -19,6 +19,9 @@ ENV GOOS=linux
 ENV GOARCH=amd64
 ENV GO111MODULE=on
 
+# Run Tests
+RUN go test -mod=readonly ./...
+
 # Do an initial compilation before setting the version so that there is less to
 # re-compile when the version changes
 RUN go build -mod=readonly ./...

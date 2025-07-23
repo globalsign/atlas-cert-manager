@@ -41,6 +41,7 @@ import (
 var (
 	errIssuerRef      = errors.New("error interpreting issuerRef")
 	errGetIssuer      = errors.New("error getting issuer")
+	errGetAuthSecret  = errors.New("failed to get Secret containing Issuer credentials")
 	errIssuerNotReady = errors.New("issuer is not ready")
 	errSignerBuilder  = errors.New("failed to build the signer")
 	errSignerSign     = errors.New("failed to sign")
@@ -124,7 +125,8 @@ func (r *CertificateRequestReconciler) Reconcile(ctx context.Context, req ctrl.R
 		if err != nil {
 			setReadyCondition(cmmeta.ConditionFalse, cmapi.CertificateRequestReasonPending, err.Error())
 		}
-		if updateErr := r.Status().Update(ctx, &certificateRequest); updateErr != nil {
+		if updateErr := r.Update(ctx, &certificateRequest); updateErr != nil {
+			log.Error(updateErr, "Failed to update CertificateRequest")
 			err = utilerrors.NewAggregate([]error{err, updateErr})
 			result = ctrl.Result{}
 		}

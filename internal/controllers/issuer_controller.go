@@ -40,7 +40,6 @@ const (
 )
 
 var (
-	errGetAuthSecret        = errors.New("failed to get Secret containing Issuer credentials")
 	errHealthCheckerBuilder = errors.New("failed to build the healthchecker")
 	errHealthCheckerCheck   = errors.New("healthcheck failed")
 )
@@ -94,7 +93,7 @@ func (r *IssuerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res
 		if err != nil {
 			issuerutil.SetReadyCondition(issuerStatus, sampleissuerapi.ConditionFalse, issuerReadyConditionReason, err.Error())
 		}
-		if updateErr := r.Status().Update(ctx, issuer); updateErr != nil {
+		if updateErr := r.Update(ctx, issuer); updateErr != nil {
 			err = utilerrors.NewAggregate([]error{err, updateErr})
 			result = ctrl.Result{}
 		}
