@@ -22,10 +22,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/clock"
+	"k8s.io/utils/clock"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -106,8 +107,9 @@ func main() {
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
-		MetricsBindAddress: metricsAddr,
-		Port:               9443,
+		Metrics: server.Options{
+			BindAddress: metricsAddr,
+		},
 		LeaderElection:     enableLeaderElection,
 		LeaderElectionID:   "54c549fd.example.com",
 	})

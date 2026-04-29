@@ -18,7 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/clock"
+	clocktesting "k8s.io/utils/clock/testing"
 	"k8s.io/apimachinery/pkg/util/sets"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,7 +31,7 @@ import (
 
 var (
 	fixedClockStart = time.Date(2021, time.January, 1, 1, 0, 0, 0, time.UTC)
-	fixedClock      = clock.NewFakeClock(fixedClockStart)
+	fixedClock      = clocktesting.NewFakeClock(fixedClockStart)
 )
 
 type fakeSigner struct {
@@ -586,9 +586,14 @@ func TestCertificateRequestReconcile(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithObjects(tc.objects...).
-				Build()
+    				WithScheme(scheme).
+    				WithObjects(tc.objects...).
+    				WithStatusSubresource(
+        			    &cmapi.CertificateRequest{},
+        			    &sampleissuerapi.Issuer{},
+        			    &sampleissuerapi.ClusterIssuer{},
+    				).
+    				Build()
 			controller := CertificateRequestReconciler{
 				Client:                   fakeClient,
 				Scheme:                   scheme,

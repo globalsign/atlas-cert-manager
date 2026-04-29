@@ -13,7 +13,7 @@ This repository implements an [External Issuer] for GlobalSign's Atlas certifica
 
 First install [cert-manager]:
 ```
-kubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.20.2/cert-manager.yaml
 ```
 Next, install the Atlas controller and CRDs:
 ```console

@@ -3,13 +3,13 @@ kind: Namespace
 metadata:
   labels:
     control-plane: controller-manager
-  name: system
+  name: atlas-issuer-system
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: controller-manager
-  namespace: system
+  namespace: atlas-issuer-system
   labels:
     control-plane: controller-manager
 spec:
@@ -29,8 +29,8 @@ spec:
         - /manager
         args:
         - --enable-leader-election
-        image: controller:latest
-        imagePullPolicy: Always
+        image: ghcr.io/globalsign/atlas-cert-manager:master
+        imagePullPolicy: IfNotPresent
         name: manager
         resources:
           limits:
