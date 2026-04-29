@@ -229,9 +229,13 @@ func TestIssuerReconcile(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithObjects(tc.objects...).
-				Build()
+    				WithScheme(scheme).
+    				WithObjects(tc.objects...).
+    				WithStatusSubresource(
+        			    &sampleissuerapi.Issuer{},
+        			    &sampleissuerapi.ClusterIssuer{},
+    				).
+    				Build()
 			if tc.kind == "" {
 				tc.kind = "Issuer"
 			}
