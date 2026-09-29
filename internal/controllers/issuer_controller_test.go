@@ -231,6 +231,7 @@ func TestIssuerReconcile(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().
 				WithScheme(scheme).
 				WithObjects(tc.objects...).
+				WithStatusSubresource(&sampleissuerapi.Issuer{}, &sampleissuerapi.ClusterIssuer{}).
 				Build()
 			if tc.kind == "" {
 				tc.kind = "Issuer"

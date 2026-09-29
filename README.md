@@ -21,6 +21,13 @@ kubectl apply -f https://github.com/globalsign/atlas-cert-manager/releases/lates
 ```
 The controller is deployed and ready to handle Atlas requests.
 
+### Upgrading from v0.0.1
+v0.0.1 used the `gcr.io/kubebuilder/kube-rbac-proxy` image, which is no longer available.
+Upgrade by applying the latest `install.yaml`; existing Issuers and ClusterIssuers are kept:
+```console
+kubectl apply -f https://github.com/globalsign/atlas-cert-manager/releases/latest/download/install.yaml
+```
+
 ## Usage
 
 There are sample yaml files in the samples directory. To start issuing, an Atlas issuer needs to be deployed along with a secret.
@@ -48,12 +55,31 @@ instead of
 kubectl get issuers.cert-manager.io
 ```
 
+## Metrics
+The controller serves Prometheus metrics over HTTPS on port `8443`, exposed by the
+`atlas-issuer-controller-manager-metrics-service` Service. Requests are authenticated
+and authorized by the controller itself using Kubernetes TokenReview and
+SubjectAccessReview, so a separate `kube-rbac-proxy` sidecar is no longer used.
+
+To scrape metrics, bind the client's ServiceAccount to the `atlas-issuer-metrics-reader` ClusterRole:
+```console
+kubectl create clusterrolebinding metrics-reader \
+  --clusterrole=atlas-issuer-metrics-reader \
+  --serviceaccount=<namespace>:<serviceaccount>
+```
+
+Metrics can be configured with the controller flags:
+* `--metrics-bind-address` (default `:8443`, set to `0` to disable)
+* `--metrics-secure` (default `true`; set to `false` to serve plain HTTP)
+
+*Note: from v0.1.0, `--metrics-addr` has been replaced by `--metrics-bind-address`.*
+
 ## Building
 ### Prerequisites
 You will need the following command line tools installed on your PATH:
 
 * [Git](https://git-scm.com/)
-* [Golang v1.17+](https://golang.org/)
+* [Golang v1.22+](https://golang.org/)
 * [Docker v17.03+](https://docs.docker.com/install/)
 * [Kubectl v1.11.3+](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
 * [Kubebuilder v2.3.1+](https://book.kubebuilder.io/quick-start.html#installation)

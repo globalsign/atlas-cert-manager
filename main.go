@@ -20,16 +20,16 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/clock"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"k8s.io/utils/clock"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	sampleissuerv1alpha1 "github.com/cert-manager/sample-external-issuer/api/v1alpha1"
 	"github.com/cert-manager/sample-external-issuer/internal/controllers"
@@ -56,12 +56,16 @@ func init() {
 
 func main() {
 	var metricsAddr string
+	var secureMetrics bool
 	var enableLeaderElection bool
 	var clusterResourceNamespace string
 	var printVersion bool
 	var disableApprovedCheck bool
 
-	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
+	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8443",
+		"The address the metrics endpoint binds to. Use :8443 for HTTPS or :8080 for HTTP. Set to 0 to disable.")
+	flag.BoolVar(&secureMetrics, "metrics-secure", true,
+		"Serve metrics over HTTPS, protected by Kubernetes authentication and authorization.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -100,16 +104,26 @@ func main() {
 		"starting",
 		"version", version.Version,
 		"enable-leader-election", enableLeaderElection,
-		"metrics-addr", metricsAddr,
+		"metrics-bind-address", metricsAddr,
+		"metrics-secure", secureMetrics,
 		"cluster-resource-namespace", clusterResourceNamespace,
 	)
 
+	// Metrics are protected by the controller-runtime authn/authz filter,
+	// which replaces the kube-rbac-proxy sidecar.
+	metricsOptions := metricsserver.Options{
+		BindAddress:   metricsAddr,
+		SecureServing: secureMetrics,
+	}
+	if secureMetrics {
+		metricsOptions.FilterProvider = filters.WithAuthenticationAndAuthorization
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: metricsAddr,
-		Port:               9443,
-		LeaderElection:     enableLeaderElection,
-		LeaderElectionID:   "54c549fd.example.com",
+		Scheme:           scheme,
+		Metrics:          metricsOptions,
+		LeaderElection:   enableLeaderElection,
+		LeaderElectionID: "54c549fd.example.com",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -171,7 +185,7 @@ func getInClusterNamespace() (string, error) {
 	}
 
 	// Load the namespace file and return its content
-	namespace, err := ioutil.ReadFile(inClusterNamespacePath)
+	namespace, err := os.ReadFile(inClusterNamespacePath)
 	if err != nil {
 		return "", fmt.Errorf("error reading namespace file: %w", err)
 	}
