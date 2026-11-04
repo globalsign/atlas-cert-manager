@@ -14,8 +14,8 @@ GITHUBOWNER ?= globalsign
 DOCKER_IMAGE_NAME ?= ${GITHUBOWNER}/atlas-cert-manager
 # Image URL to use all building/pushing image targets
 IMG ?= ${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${VERSION}
-# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:trivialVersions=true"
+# Options passed to controller-gen when generating CRDs
+CRD_OPTIONS ?= "crd"
 
 # BIN is the directory where tools will be installed
 export BIN ?= ${CURDIR}/bin
@@ -32,7 +32,7 @@ K8S_CLUSTER_NAME := atlas-issuer-e2e
 CERT_MANAGER_VERSION ?= 1.11.0
 
 # Controller tools
-CONTROLLER_GEN_VERSION := 0.5.0
+CONTROLLER_GEN_VERSION := 0.16.5
 CONTROLLER_GEN := ${BIN}/controller-gen-${CONTROLLER_GEN_VERSION}
 
 INSTALL_YAML ?= build/install.yaml

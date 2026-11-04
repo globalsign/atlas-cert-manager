@@ -29,9 +29,14 @@ spec:
         - /manager
         args:
         - --enable-leader-election
+        - --metrics-bind-address=:8443
         image: controller:latest
         imagePullPolicy: Always
         name: manager
+        ports:
+        - containerPort: 8443
+          name: https
+          protocol: TCP
         resources:
           limits:
             cpu: 100m
